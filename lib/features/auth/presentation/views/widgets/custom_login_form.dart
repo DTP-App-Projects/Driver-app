@@ -1,9 +1,8 @@
-import 'package:digital_trade_portal_driver/core/utils/navigation_utility.dart';
-import 'package:digital_trade_portal_driver/features/main_layout/presentation/views/main_layout_view.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:email_validator/email_validator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:digital_trade_portal_driver/core/shared_cubits/change_language/change_language_cubit.dart';
 import 'package:digital_trade_portal_driver/core/shared_cubits/change_language/change_language_states.dart';
 import 'package:digital_trade_portal_driver/core/shared_widgets/custom_button.dart';
@@ -14,6 +13,7 @@ import 'package:digital_trade_portal_driver/core/utils/colors/colors.dart';
 import 'package:digital_trade_portal_driver/core/utils/constants.dart';
 import 'package:digital_trade_portal_driver/core/utils/text_styles/styles.dart';
 import 'package:digital_trade_portal_driver/features/auth/presentation/view_models/login/login_cubit.dart';
+import 'package:digital_trade_portal_driver/features/auth/presentation/views/widgets/forgot_password_sheet.dart';
 
 class CustomLoginForm extends StatefulWidget {
   const CustomLoginForm({super.key});
@@ -44,9 +44,20 @@ class _CustomLoginFormState extends State<CustomLoginForm> {
   void onSubmit() {
     FocusScope.of(context).unfocus();
     if (!formKey.currentState!.validate()) return;
-    NavigationUtils.navigateTo(context: context, destinationScreen: MainLayoutView());
+    context.read<LoginCubit>().login(email: email.text, password: password.text);
+  }
 
-    // context.read<LoginCubit>().login(phone: phoneController.text);
+  void openForgotPassword() {
+    FocusScope.of(context).unfocus();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.sp20(context))),
+      ),
+      builder: (sheetContext) => ForgotPasswordSheet(initialEmail: email.text.trim()),
+    );
   }
 
   @override
@@ -120,6 +131,26 @@ class _CustomLoginFormState extends State<CustomLoginForm> {
             validationMsg: "passwordRequired".tr(),
             onFilledSubmit: (_) => onSubmit(),
           ),
+          SizedBox(height: AppConstants.height10(context)),
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: InkWell(
+              onTap: openForgotPassword,
+              borderRadius: BorderRadius.circular(AppConstants.sp10(context)),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppConstants.width5(context),
+                  vertical: AppConstants.height5(context) * .6,
+                ),
+                child: Text(
+                  "forgot_password".tr(),
+                  style: Styles.font12MediumBlack(
+                    context,
+                  ).copyWith(color: AppColors.primarySwatchColor, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -132,10 +163,11 @@ class _CustomLoginFormState extends State<CustomLoginForm> {
           LoadingDialog().show(context);
         } else if (state is LoginSuccessState) {
           LoadingDialog().hide();
-          toast(text: state.model.message ?? "", context: context);
-          // NavigationUtils.navigateTo(context: context, destinationScreen: VerificationView(phone: phoneController.text,requestId:state.model.requestId!));
           email.clear();
           password.clear();
+          // Same entry point the splash uses once a session exists; the
+          // profile and today's route load from the main layout.
+          GoRouter.of(context).pushReplacement("/mainLayoutView");
         } else if (state is LoginErrorState) {
           LoadingDialog().hide();
           toast(text: state.errMessage, context: context, isSuccess: false);

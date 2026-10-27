@@ -68,6 +68,17 @@ class RouteStopItem extends StatelessWidget {
                 ),
                 SizedBox(height: AppConstants.height5(context) * .6),
                 Text(stop.type.titleKey.tr(), style: Styles.font11MediumGrey46(context)),
+                // Why the stop was dropped — matters most when the supplier
+                // did it (shipment canceled, rescheduled) without the driver.
+                if (stop.status.isDropped && stop.failureReasonLabel != null) ...[
+                  SizedBox(height: AppConstants.height5(context) * .6),
+                  Text(
+                    stop.failureReasonLabel!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Styles.font10MediumGrey46(context).copyWith(color: AppColors.red),
+                  ),
+                ],
               ],
             ),
           ),

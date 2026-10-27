@@ -37,24 +37,22 @@ class CustomMultiDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiDropdown<String>(
-      items: items!
-          .map((item) => DropdownItem<String>(
-                value: item.toString(),
-                label: item.toString(),
-              ))
-          .toList(),
+      items: items!.map((item) => DropdownItem<String>(value: item.toString(), label: item.toString())).toList(),
       // controller: controller,
       enabled: enabled,
       searchEnabled: searchEnabled,
 
       chipDecoration: ChipDecoration(
-          backgroundColor: const Color(0xffF1F1F1),
-          wrap: true,
-          runSpacing: 2,
-          padding:
-              EdgeInsets.symmetric(horizontal: AppConstants.width10(context), vertical: AppConstants.height5(context)),
-          spacing: 10,
-          borderRadius: BorderRadius.all(Radius.circular(AppConstants.sp5(context)))),
+        backgroundColor: const Color(0xffF1F1F1),
+        wrap: true,
+        runSpacing: 2,
+        padding: EdgeInsets.symmetric(
+          horizontal: AppConstants.width10(context),
+          vertical: AppConstants.height5(context),
+        ),
+        spacing: 10,
+        borderRadius: BorderRadius.all(Radius.circular(AppConstants.sp5(context))),
+      ),
 
       fieldDecoration: FieldDecoration(
         hintText: hintText,
@@ -62,43 +60,22 @@ class CustomMultiDropdown extends StatelessWidget {
         showClearIcon: false,
         borderRadius: AppConstants.sp10(context),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.all(
-            Radius.circular(
-              borderRadius,
-            ),
-          ),
+          borderRadius: BorderRadius.all(Radius.circular(borderRadius)),
           borderSide: (!hasBorder)
               ? BorderSide.none
-              : BorderSide(
-                  color: borderSideColor ?? AppColors.primaryColor,
-                  width: borderSideWidth,
-                ),
+              : BorderSide(color: borderSideColor ?? AppColors.primaryColor, width: borderSideWidth),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.all(
-            Radius.circular(
-              borderRadius,
-            ),
-          ),
+          borderRadius: BorderRadius.all(Radius.circular(borderRadius)),
           borderSide: (!hasBorder)
               ? BorderSide.none
-              : BorderSide(
-                  color: borderSideColor ?? AppColors.primaryColor,
-                  width: borderSideWidth,
-                ),
+              : BorderSide(color: borderSideColor ?? AppColors.primaryColor, width: borderSideWidth),
         ),
         disabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.all(
-            Radius.circular(
-              borderRadius,
-            ),
-          ),
+          borderRadius: BorderRadius.all(Radius.circular(borderRadius)),
           borderSide: (!hasBorder)
               ? BorderSide.none
-              : BorderSide(
-                  color: borderSideEnabledColor ?? Colors.grey.shade300,
-                  width: borderSideWidth,
-                ),
+              : BorderSide(color: borderSideEnabledColor ?? Colors.grey.shade300, width: borderSideWidth),
         ),
       ),
       dropdownDecoration: DropdownDecoration(

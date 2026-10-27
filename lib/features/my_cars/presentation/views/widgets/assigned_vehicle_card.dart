@@ -33,9 +33,7 @@ class AssignedVehicleCard extends StatelessWidget {
                   children: [
                     Text(
                       "plate".tr(),
-                      style: Styles.font12MediumBlack(
-                        context,
-                      ).copyWith(color: Colors.white.withValues(alpha: .80)),
+                      style: Styles.font12MediumBlack(context).copyWith(color: Colors.white.withValues(alpha: .80)),
                     ),
                     SizedBox(height: AppConstants.height5(context) * .6),
                     Text(
@@ -55,14 +53,12 @@ class AssignedVehicleCard extends StatelessWidget {
           Row(
             children: [
               _buildFact(context, label: "vehicle_type".tr(), value: vehicle.type.titleKey.tr()),
-              _buildFact(context, label: "vehicle_model".tr(), value: vehicle.model),
+              _buildFact(context, label: "vehicle_model".tr(), value: vehicle.model ?? "—"),
               _buildFact(
                 context,
                 label: "capacity".tr(),
                 value: "tons".tr(
-                  namedArgs: {
-                    "value": NumberFormat("#0.#", context.locale.languageCode).format(vehicle.capacityTons),
-                  },
+                  namedArgs: {"value": NumberFormat("#0.#", context.locale.languageCode).format(vehicle.capacityTons)},
                 ),
               ),
             ],

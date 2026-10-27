@@ -47,10 +47,7 @@ class BottomNavBarItem extends StatelessWidget {
                   tab.icon,
                   width: MediaQuery.of(context).size.height * .028,
                   height: MediaQuery.of(context).size.height * .028,
-                  colorFilter: ColorFilter.mode(
-                    isSelected ? Colors.white : inactiveColor,
-                    BlendMode.srcIn,
-                  ),
+                  colorFilter: ColorFilter.mode(isSelected ? Colors.white : inactiveColor, BlendMode.srcIn),
                 ),
               ),
               SizedBox(height: AppConstants.height5(context)),

@@ -10,10 +10,14 @@ import 'package:digital_trade_portal_driver/core/utils/services/local_services/c
 import 'package:digital_trade_portal_driver/core/utils/text_styles/styles.dart';
 
 class CustomAppBar extends StatelessWidget {
-  const CustomAppBar({super.key, required this.title, this.withBack = true});
+  const CustomAppBar({super.key, required this.title, this.withBack = true, this.trailing});
 
   final String title;
   final bool withBack;
+
+  /// Optional action on the end side; takes the place of the spacer that
+  /// keeps the title centred.
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +47,13 @@ class CustomAppBar extends StatelessWidget {
                 style: Styles.font18SemiBoldBlack(context),
               ),
             ),
-            SizedBox(width: AppConstants.width30(context) * 1.5),
+            if (trailing != null)
+              SizedBox(
+                width: AppConstants.width30(context) * 1.5,
+                child: Center(child: trailing),
+              )
+            else
+              SizedBox(width: AppConstants.width30(context) * 1.5),
           ],
         );
       },

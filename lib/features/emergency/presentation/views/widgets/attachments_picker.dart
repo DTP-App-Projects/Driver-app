@@ -33,9 +33,7 @@ class AttachmentsPicker extends StatelessWidget {
             Wrap(
               spacing: AppConstants.width10(context),
               runSpacing: AppConstants.height10(context),
-              children: [
-                for (int i = 0; i < images.length; i++) _buildThumbnail(context, index: i),
-              ],
+              children: [for (int i = 0; i < images.length; i++) _buildThumbnail(context, index: i)],
             ),
             SizedBox(height: AppConstants.height15(context)),
           ],
@@ -64,10 +62,7 @@ class AttachmentsPicker extends StatelessWidget {
             child: Container(
               margin: EdgeInsets.all(AppConstants.sp5(context) * .5),
               padding: EdgeInsets.all(AppConstants.sp5(context) * .5),
-              decoration: BoxDecoration(
-                color: AppColors.neutralColor.withValues(alpha: .60),
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: AppColors.neutralColor.withValues(alpha: .60), shape: BoxShape.circle),
               child: Icon(Icons.close_rounded, size: size * .16, color: Colors.white),
             ),
           ),
@@ -93,10 +88,9 @@ class AttachmentsPicker extends StatelessWidget {
             SizedBox(width: AppConstants.width5(context)),
             Text(
               "add_photo".tr(),
-              style: Styles.font14MediumBlack(context).copyWith(
-                color: AppColors.primarySwatchColor,
-                fontWeight: FontWeight.w700,
-              ),
+              style: Styles.font14MediumBlack(
+                context,
+              ).copyWith(color: AppColors.primarySwatchColor, fontWeight: FontWeight.w700),
             ),
           ],
         ),

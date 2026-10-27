@@ -23,11 +23,7 @@ class StatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppConstants.sp20(context)),
         border: Border.all(color: const Color(0xffEDEFF2)),
         boxShadow: [
-          BoxShadow(
-            color: AppColors.neutralColor.withValues(alpha: .04),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
+          BoxShadow(color: AppColors.neutralColor.withValues(alpha: .04), blurRadius: 16, offset: const Offset(0, 6)),
         ],
       ),
       child: Column(
@@ -41,11 +37,7 @@ class StatCard extends StatelessWidget {
             style: Styles.font11MediumGrey46(context),
           ),
           SizedBox(height: AppConstants.height5(context)),
-          Text(
-            value,
-            maxLines: 1,
-            style: Styles.font24BoldBlack(context).copyWith(color: color),
-          ),
+          Text(value, maxLines: 1, style: Styles.font24BoldBlack(context).copyWith(color: color)),
         ],
       ),
     );

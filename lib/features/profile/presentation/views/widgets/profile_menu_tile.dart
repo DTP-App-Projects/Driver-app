@@ -39,10 +39,7 @@ class ProfileMenuTile extends StatelessWidget {
             Container(
               width: circleSize,
               height: circleSize,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: color.withValues(alpha: .10),
-              ),
+              decoration: BoxDecoration(shape: BoxShape.circle, color: color.withValues(alpha: .10)),
               child: Icon(icon, size: circleSize * .52, color: color),
             ),
             SizedBox(width: AppConstants.width15(context)),

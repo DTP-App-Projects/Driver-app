@@ -18,10 +18,9 @@ class InfoRow extends StatelessWidget {
         Expanded(child: Text(label, style: Styles.font12MediumGrey46(context))),
         Text(
           value,
-          style: Styles.font14MediumBlack(context).copyWith(
-            color: valueColor ?? AppColors.neutralColor[800],
-            fontWeight: FontWeight.w700,
-          ),
+          style: Styles.font14MediumBlack(
+            context,
+          ).copyWith(color: valueColor ?? AppColors.neutralColor[800], fontWeight: FontWeight.w700),
         ),
       ],
     );

@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:digital_trade_portal_driver/core/shared_widgets/custom_loading_item.dart';
 import 'package:digital_trade_portal_driver/core/utils/colors/colors.dart';
 import 'package:digital_trade_portal_driver/core/utils/constants.dart';
 import 'package:digital_trade_portal_driver/core/utils/text_styles/styles.dart';
@@ -11,17 +12,31 @@ import 'package:digital_trade_portal_driver/features/routes/presentation/views/w
 /// empty state that explains what will happen and offers an explicit way to
 /// check again, instead of relying on the pull to refresh gesture alone.
 class TodayRouteCard extends StatelessWidget {
-  const TodayRouteCard({super.key, this.routes = const [], this.onRouteTap, this.onRefresh});
+  const TodayRouteCard({
+    super.key,
+    this.routes = const [],
+    this.onRouteTap,
+    this.onRefresh,
+    this.isLoading = false,
+    this.errorMessage,
+  });
 
   final List<RouteModel> routes;
+
+  /// First load in flight: a loader replaces the list.
+  final bool isLoading;
+
+  /// The load failed and there is nothing cached to show.
+  final String? errorMessage;
 
   /// Called with the tapped route so the caller can open its details.
   final ValueChanged<RouteModel>? onRouteTap;
 
   final VoidCallback? onRefresh;
 
-  /// Newest route first, same ordering as the routes screen.
-  List<RouteModel> get sortedRoutes => [...routes]..sort((a, b) => b.date.compareTo(a.date));
+  /// Today's route first, then overdue ones, then the upcoming ones — the
+  /// order the API hands them over in.
+  List<RouteModel> get sortedRoutes => routes;
 
   @override
   Widget build(BuildContext context) {
@@ -31,11 +46,7 @@ class TodayRouteCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppConstants.sp20(context)),
         border: Border.all(color: const Color(0xffEDEFF2)),
         boxShadow: [
-          BoxShadow(
-            color: AppColors.neutralColor.withValues(alpha: .04),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
+          BoxShadow(color: AppColors.neutralColor.withValues(alpha: .04), blurRadius: 20, offset: const Offset(0, 8)),
         ],
       ),
       child: Column(
@@ -43,7 +54,12 @@ class TodayRouteCard extends StatelessWidget {
         children: [
           _buildCardTitle(context),
           const Divider(height: 1, color: Color(0xffF0F2F5)),
-          if (routes.isEmpty)
+          if (isLoading)
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: AppConstants.height30(context)),
+              child: const CustomLoadingItem(),
+            )
+          else if (routes.isEmpty)
             Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: AppConstants.width20(context),
@@ -91,10 +107,9 @@ class TodayRouteCard extends StatelessWidget {
       ),
       child: Text(
         NumberFormat.decimalPattern(context.locale.languageCode).format(routes.length),
-        style: Styles.font10MediumBlack(context).copyWith(
-          color: AppColors.primarySwatchColor,
-          fontWeight: FontWeight.w700,
-        ),
+        style: Styles.font10MediumBlack(
+          context,
+        ).copyWith(color: AppColors.primarySwatchColor, fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -115,33 +130,30 @@ class TodayRouteCard extends StatelessWidget {
     );
   }
 
+  /// Empty state, or the failure state when the request itself failed: same
+  /// layout, danger tint and the server message instead of the hint.
   Widget _buildEmptyState(BuildContext context) {
     final iconSize = MediaQuery.of(context).size.height * .10;
+    final bool hasError = errorMessage != null;
+    final color = hasError ? AppColors.red : AppColors.primarySwatchColor;
 
     return Column(
       children: [
         Container(
           width: iconSize,
           height: iconSize,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.primarySwatchColor.withValues(alpha: .08),
-          ),
-          child: Icon(
-            Icons.list_alt_rounded,
-            size: iconSize * .45,
-            color: AppColors.primarySwatchColor,
-          ),
+          decoration: BoxDecoration(shape: BoxShape.circle, color: color.withValues(alpha: .08)),
+          child: Icon(hasError ? Icons.wifi_off_rounded : Icons.list_alt_rounded, size: iconSize * .45, color: color),
         ),
         SizedBox(height: AppConstants.height20(context)),
         Text(
-          "no_route_title".tr(),
+          (hasError ? "route_load_failed" : "no_route_title").tr(),
           textAlign: TextAlign.center,
           style: Styles.font16SemiBoldBlack(context),
         ),
         SizedBox(height: AppConstants.height10(context)),
         Text(
-          "no_route_hint".tr(),
+          hasError ? errorMessage! : "no_route_hint".tr(),
           textAlign: TextAlign.center,
           style: Styles.font12MediumGrey46(context).copyWith(height: 1.6),
         ),
@@ -172,10 +184,9 @@ class TodayRouteCard extends StatelessWidget {
           SizedBox(width: AppConstants.width5(context)),
           Text(
             "refresh".tr(),
-            style: Styles.font14MediumBlack(context).copyWith(
-              color: AppColors.primarySwatchColor,
-              fontWeight: FontWeight.w700,
-            ),
+            style: Styles.font14MediumBlack(
+              context,
+            ).copyWith(color: AppColors.primarySwatchColor, fontWeight: FontWeight.w700),
           ),
         ],
       ),

@@ -29,7 +29,7 @@ void exitDialog(context) {
             SizedBox(height: AppConstants.height15(context)),
             // Image.asset(AssetData.lamlomSad, width: MediaQuery.of(context).size.width * 0.5),
             SizedBox(height: AppConstants.height15(context)),
-            Text("exit_hint".tr(), style: Styles.font14MediumGrey46(context),textAlign: TextAlign.center,),
+            Text("exit_hint".tr(), style: Styles.font14MediumGrey46(context), textAlign: TextAlign.center),
             SizedBox(height: AppConstants.height20(context)),
             Row(
               children: [

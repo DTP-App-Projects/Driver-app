@@ -43,17 +43,17 @@ class CustomDropDownButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField2(
-      dropdownStyleData: DropdownStyleData(maxHeight: MediaQuery.of(context).size.height * .4,decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppConstants.sp10(context))
-      )),
+      dropdownStyleData: DropdownStyleData(
+        maxHeight: MediaQuery.of(context).size.height * .4,
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(AppConstants.sp10(context))),
+      ),
       buttonStyleData: ButtonStyleData(
         height: height ?? AppConstants.height30(context) * 2,
         padding: EdgeInsetsDirectional.only(end: AppConstants.width10(context)),
       ),
       decoration: InputDecoration(
         prefixIcon: prefixIcon,
-        fillColor: fillColor??Colors.white,
+        fillColor: fillColor ?? Colors.white,
         filled: true,
         isDense: true,
         contentPadding: EdgeInsets.zero,

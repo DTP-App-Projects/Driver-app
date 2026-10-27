@@ -66,9 +66,7 @@ class DeliveryProgressCard extends StatelessWidget {
           ),
           SizedBox(height: AppConstants.height10(context)),
           Text(
-            "stops_count".tr(
-              namedArgs: {"done": number.format(stopsDone), "total": number.format(stopsTotal)},
-            ),
+            "stops_count".tr(namedArgs: {"done": number.format(stopsDone), "total": number.format(stopsTotal)}),
             style: Styles.font12MediumBlack(context).copyWith(color: Colors.white.withValues(alpha: .85)),
           ),
         ],

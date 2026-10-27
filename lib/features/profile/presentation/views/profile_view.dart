@@ -11,13 +11,18 @@ import 'package:digital_trade_portal_driver/core/shared_widgets/toast.dart';
 import 'package:digital_trade_portal_driver/core/utils/colors/colors.dart';
 import 'package:digital_trade_portal_driver/core/utils/constants.dart';
 import 'package:digital_trade_portal_driver/core/utils/navigation_utility.dart';
-import 'package:digital_trade_portal_driver/core/utils/services/local_services/secure_cache_helper.dart';
 import 'package:digital_trade_portal_driver/core/utils/text_styles/styles.dart';
 import 'package:digital_trade_portal_driver/features/my_cars/presentation/views/my_cars_view.dart';
 import 'package:digital_trade_portal_driver/features/notification/presentation/views/notification_view.dart';
+import 'package:digital_trade_portal_driver/features/profile/presentation/view_models/driver_profile/driver_profile_cubit.dart';
 import 'package:digital_trade_portal_driver/features/profile/presentation/views/about_us_view.dart';
+import 'package:digital_trade_portal_driver/features/profile/presentation/views/earnings_view.dart';
 import 'package:digital_trade_portal_driver/features/profile/presentation/views/my_account_view.dart';
+import 'package:digital_trade_portal_driver/features/profile/presentation/views/support_view.dart';
+import 'package:digital_trade_portal_driver/features/profile/presentation/views/terms_view.dart';
+import 'package:digital_trade_portal_driver/features/profile/presentation/views/widgets/account_deletion_sheet.dart';
 import 'package:digital_trade_portal_driver/features/routes/presentation/views/routes_view.dart';
+import 'package:digital_trade_portal_driver/features/training/presentation/views/training_view.dart';
 import 'package:digital_trade_portal_driver/features/profile/presentation/views/widgets/profile_header.dart';
 import 'package:digital_trade_portal_driver/features/profile/presentation/views/widgets/profile_menu_section.dart';
 import 'package:digital_trade_portal_driver/features/profile/presentation/views/widgets/profile_menu_tile.dart';
@@ -26,48 +31,59 @@ import 'package:digital_trade_portal_driver/features/profile/presentation/views/
 class ProfileView extends StatelessWidget {
   const ProfileView({super.key});
 
-  // TODO: read the signed in driver from the profile endpoint once it exists.
-  static const String driverName = "خالد ماهر";
-  static const String driverPhone = "+201145822106";
-  static const String driverEmail = "khaled.maher@dtp.com";
-  static const int deliveriesCount = 315;
-  static const int pickupsCount = 5;
-  static const double driverRating = 4.2;
-
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ChangeLanguageCubit, ChangeLanguageStates>(
       builder: (context, langState) {
-        return Scaffold(
-          backgroundColor: const Color(0xffF5F7FA),
-          body: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              const ProfileHeader(name: driverName, phone: driverPhone),
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  AppConstants.width20(context),
-                  AppConstants.height24(context),
-                  AppConstants.width20(context),
-                  AppConstants.height30(context),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        return BlocBuilder<DriverProfileCubit, DriverProfileState>(
+          builder: (context, profileState) {
+            final driver = profileState.driver;
+
+            return Scaffold(
+              backgroundColor: const Color(0xffF5F7FA),
+              body: RefreshIndicator(
+                color: AppColors.primarySwatchColor,
+                onRefresh: () => context.read<DriverProfileCubit>().loadProfile(silent: true),
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.zero,
                   children: [
-                    const ProfileStats(deliveries: deliveriesCount, pickups: pickupsCount, rating: driverRating),
-                    SizedBox(height: AppConstants.height24(context)),
-                    _buildAccountSection(context),
-                    SizedBox(height: AppConstants.height24(context)),
-                    _buildAppSection(context),
-                    SizedBox(height: AppConstants.height24(context)),
-                    _buildSupportSection(context),
-                    SizedBox(height: AppConstants.height24(context)),
-                    _buildDangerSection(context),
+                    ProfileHeader(
+                      name: driver?.displayName ?? "",
+                      phone: driver?.phone ?? "",
+                      isOnline: driver?.isActive ?? true,
+                    ),
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        AppConstants.width20(context),
+                        AppConstants.height24(context),
+                        AppConstants.width20(context),
+                        AppConstants.height30(context),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ProfileStats(
+                            deliveries: driver?.totalDeliveries ?? 0,
+                            pickups: driver?.totalPickups ?? 0,
+                            rating: driver?.rating ?? 0,
+                          ),
+                          SizedBox(height: AppConstants.height24(context)),
+                          _buildAccountSection(context),
+                          SizedBox(height: AppConstants.height24(context)),
+                          _buildAppSection(context),
+                          SizedBox(height: AppConstants.height24(context)),
+                          _buildSupportSection(context),
+                          SizedBox(height: AppConstants.height24(context)),
+                          _buildDangerSection(context),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -80,10 +96,7 @@ class ProfileView extends StatelessWidget {
         ProfileMenuTile(
           icon: Icons.person_outline_rounded,
           title: "my_account".tr(),
-          onTap: () => NavigationUtils.navigateTo(
-            context: context,
-            destinationScreen: const MyAccountView(name: driverName, email: driverEmail, phone: driverPhone),
-          ),
+          onTap: () => NavigationUtils.navigateTo(context: context, destinationScreen: const MyAccountView()),
         ),
         ProfileMenuTile(
           icon: Icons.directions_car_filled_outlined,
@@ -94,6 +107,16 @@ class ProfileView extends StatelessWidget {
           icon: Icons.route_outlined,
           title: "routes".tr(),
           onTap: () => NavigationUtils.navigateTo(context: context, destinationScreen: const RoutesView()),
+        ),
+        ProfileMenuTile(
+          icon: Icons.payments_outlined,
+          title: "earnings_performance".tr(),
+          onTap: () => NavigationUtils.navigateTo(context: context, destinationScreen: const EarningsView()),
+        ),
+        ProfileMenuTile(
+          icon: Icons.school_outlined,
+          title: "training".tr(),
+          onTap: () => NavigationUtils.navigateTo(context: context, destinationScreen: const TrainingView()),
         ),
       ],
     );
@@ -131,15 +154,16 @@ class ProfileView extends StatelessWidget {
     return ProfileMenuSection(
       title: "support_info".tr(),
       items: [
-        ProfileMenuTile(
-          icon: Icons.shield_outlined,
-          title: "privacy_policy".tr(),
-          onTap: () => comingSoon(context),
-        ),
+        ProfileMenuTile(icon: Icons.shield_outlined, title: "privacy_policy".tr(), onTap: () => comingSoon(context)),
         ProfileMenuTile(
           icon: Icons.description_outlined,
           title: "terms_of_service".tr(),
-          onTap: () => comingSoon(context),
+          onTap: () => NavigationUtils.navigateTo(context: context, destinationScreen: const TermsView()),
+        ),
+        ProfileMenuTile(
+          icon: Icons.support_agent_rounded,
+          title: "support".tr(),
+          onTap: () => NavigationUtils.navigateTo(context: context, destinationScreen: const SupportView()),
         ),
         ProfileMenuTile(
           icon: Icons.info_outline_rounded,
@@ -163,7 +187,16 @@ class ProfileView extends StatelessWidget {
           icon: Icons.delete_outline_rounded,
           title: "delete_account".tr(),
           isDestructive: true,
-          onTap: () => comingSoon(context),
+          onTap: () => showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            useSafeArea: true,
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.sp20(context))),
+            ),
+            builder: (sheetContext) => const AccountDeletionSheet(),
+          ),
         ),
       ],
     );
@@ -183,16 +216,9 @@ class ProfileView extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                "logout".tr(),
-                style: Styles.font18SemiBoldBlack(context).copyWith(color: AppColors.red),
-              ),
+              Text("logout".tr(), style: Styles.font18SemiBoldBlack(context).copyWith(color: AppColors.red)),
               SizedBox(height: AppConstants.height15(context)),
-              Text(
-                "logout_hint".tr(),
-                textAlign: TextAlign.center,
-                style: Styles.font14MediumGrey46(context),
-              ),
+              Text("logout_hint".tr(), textAlign: TextAlign.center, style: Styles.font14MediumGrey46(context)),
               SizedBox(height: AppConstants.height20(context)),
               Row(
                 children: [
@@ -222,10 +248,13 @@ class ProfileView extends StatelessWidget {
     );
   }
 
+  /// Unregisters the push token and forgets the session through the profile
+  /// cubit, then goes back to the login flow.
   Future<void> logout(BuildContext context) async {
     final router = GoRouter.of(context);
+    final profileCubit = context.read<DriverProfileCubit>();
     NavigationUtils.navigateBack(context: context);
-    await SecureCacheHelper.removeData(key: "token");
-    router.pushReplacement("/loginView");
+    await profileCubit.logout();
+    router.go("/loginView");
   }
 }

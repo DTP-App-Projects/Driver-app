@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:digital_trade_portal_driver/core/utils/services/remote_services/endpoints.dart';
 
 /// One driven leg of a route: driver -> first stop, first stop -> second stop
@@ -23,8 +23,9 @@ class DirectionsResult {
   Duration get duration => legs.fold(Duration.zero, (total, leg) => total + leg.duration);
 }
 
-/// Asks Google for the road path through the remaining stops, in order, so the
-/// map draws what the driver actually drives instead of a straight line.
+/// Asks OSRM (OpenStreetMap road data) for the road path through the
+/// remaining stops, in order, so the map draws what the driver actually drives
+/// instead of a straight line.
 class DirectionsService {
   DirectionsService({Dio? dio}) : _dio = dio ?? Dio();
 
@@ -32,7 +33,8 @@ class DirectionsService {
 
   /// [origin] is the live driver position, [stops] the stops still to visit in
   /// the order they are driven. Null when the route cannot be built, so the
-  /// caller can fall back to straight lines.
+  /// caller can fall back to straight lines. OSRM has no localized output, so
+  /// [languageCode] is unused; it stays for callers.
   Future<DirectionsResult?> route({
     required LatLng origin,
     required List<LatLng> stops,
@@ -40,29 +42,19 @@ class DirectionsService {
   }) async {
     if (stops.isEmpty) return null;
 
+    // OSRM takes "lng,lat" pairs joined by ";".
+    final coordinates = [origin, ...stops].map((point) => "${point.longitude},${point.latitude}").join(";");
+
     try {
-      final response = await _dio.post(
-        EndPoints.googleRoutesUrl,
-        options: Options(
-          headers: {
-            "Content-Type": "application/json",
-            "X-Goog-Api-Key": EndPoints.googleMapsApiKey,
-            // Routes API bills per requested field, so only ask for the shape
-            // and the numbers shown to the driver.
-            "X-Goog-FieldMask": "routes.legs.polyline.encodedPolyline,routes.legs.distanceMeters,routes.legs.duration",
-          },
-        ),
-        data: {
-          "origin": _waypoint(origin),
-          "destination": _waypoint(stops.last),
-          if (stops.length > 1) "intermediates": [for (final stop in stops.sublist(0, stops.length - 1)) _waypoint(stop)],
-          "travelMode": "DRIVE",
-          "routingPreference": "TRAFFIC_AWARE",
-          "polylineQuality": "HIGH_QUALITY",
-          "languageCode": languageCode,
-          "units": "METRIC",
-        },
+      final response = await _dio.get(
+        "${EndPoints.osrmRouteUrl}/$coordinates",
+        // Steps carry the per leg shape; the overview would be one line for
+        // the whole route.
+        queryParameters: {"overview": "false", "steps": "true", "geometries": "polyline"},
+        options: Options(headers: {"User-Agent": EndPoints.osmUserAgent}),
       );
+
+      if (response.data?["code"] != "Ok") return null;
 
       final routes = response.data?["routes"] as List?;
       if (routes == null || routes.isEmpty) return null;
@@ -74,14 +66,17 @@ class DirectionsService {
         legs: [
           for (final leg in legs)
             DirectionsLeg(
-              points: decodePolyline(leg["polyline"]?["encodedPolyline"] as String? ?? ""),
-              distanceMeters: (leg["distanceMeters"] as num?)?.toInt() ?? 0,
-              duration: _parseDuration(leg["duration"] as String?),
+              points: [
+                for (final step in (leg["steps"] as List?) ?? const [])
+                  ...decodePolyline(step["geometry"] as String? ?? ""),
+              ],
+              distanceMeters: (leg["distance"] as num?)?.round() ?? 0,
+              duration: Duration(seconds: (leg["duration"] as num?)?.round() ?? 0),
             ),
         ],
       );
     } on DioException catch (error) {
-      // Most often the key is missing the Routes API; the map keeps working.
+      // The map keeps working with straight hops.
       debugPrint("Directions request failed: ${error.response?.statusCode} ${error.response?.data}");
       return null;
     } catch (error) {
@@ -90,19 +85,7 @@ class DirectionsService {
     }
   }
 
-  Map<String, dynamic> _waypoint(LatLng point) => {
-    "location": {
-      "latLng": {"latitude": point.latitude, "longitude": point.longitude},
-    },
-  };
-
-  /// Routes API returns seconds as a string, e.g. "845s".
-  Duration _parseDuration(String? value) {
-    if (value == null) return Duration.zero;
-    return Duration(seconds: int.tryParse(value.replaceAll("s", "")) ?? 0);
-  }
-
-  /// Google encoded polyline algorithm, turned back into map points.
+  /// Encoded polyline algorithm (precision 5, as OSRM returns it), turned back into map points.
   static List<LatLng> decodePolyline(String encoded) {
     final points = <LatLng>[];
     int index = 0, latitude = 0, longitude = 0;

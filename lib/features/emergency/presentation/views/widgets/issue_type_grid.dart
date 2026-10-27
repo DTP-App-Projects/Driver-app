@@ -34,6 +34,11 @@ class IssueTypeGrid extends StatelessWidget {
                     ),
                   ),
                 ],
+                // Keeps a lone last card at half width, in its column.
+                if (row + 1 >= IssueType.values.length) ...[
+                  SizedBox(width: spacing),
+                  const Expanded(child: SizedBox()),
+                ],
               ],
             ),
           ),
@@ -80,10 +85,7 @@ class IssueTypeCard extends StatelessWidget {
                 Container(
                   width: circleSize,
                   height: circleSize,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: type.color.withValues(alpha: .12),
-                  ),
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: type.color.withValues(alpha: .12)),
                   child: Icon(type.icon, size: circleSize * .5, color: type.color),
                 ),
                 SizedBox(height: AppConstants.height10(context)),

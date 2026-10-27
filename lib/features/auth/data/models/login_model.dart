@@ -1,9 +1,19 @@
-class LoginModel {
-  String? message;
-  String? requestId;
+import 'package:digital_trade_portal_driver/core/utils/json_utils.dart';
+import 'package:digital_trade_portal_driver/features/auth/data/models/user_model.dart';
 
-  LoginModel.fromJson(Map<String, dynamic> json) {
-    message = json['message'];
-    requestId = json['request_id'];
+/// `POST /api/auth/login` → `{ user: { …, id, jwt } }`.
+class LoginModel {
+  const LoginModel({required this.user, this.message});
+
+  final UserModel user;
+  final String? message;
+
+  String get jwt => user.jwt ?? "";
+
+  factory LoginModel.fromJson(Map<String, dynamic> json) {
+    return LoginModel(
+      user: UserModel.fromJson(JsonUtils.asMap(json["user"])),
+      message: JsonUtils.asString(json["msg"] ?? json["message"]),
+    );
   }
 }

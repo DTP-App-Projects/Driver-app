@@ -8,6 +8,18 @@ import 'package:digital_trade_portal_driver/features/main_layout/presentation/vi
 import 'package:digital_trade_portal_driver/core/shared_cubits/change_language/change_language_cubit.dart';
 import 'package:digital_trade_portal_driver/core/shared_cubits/change_language/change_language_states.dart';
 import 'package:digital_trade_portal_driver/core/utils/services/local_services/cache_keys.dart';
+import 'package:digital_trade_portal_driver/core/utils/services/local_services/location_tracker.dart';
+import 'package:digital_trade_portal_driver/core/utils/services/local_services/offline_queue.dart';
+import 'package:digital_trade_portal_driver/core/utils/services/local_services/push_event_bus.dart';
+import 'package:digital_trade_portal_driver/features/notification/data/repos/notifications_repo_impl.dart';
+import 'package:digital_trade_portal_driver/features/notification/presentation/view_models/notifications/notifications_cubit.dart';
+import 'package:digital_trade_portal_driver/features/profile/data/repos/profile_repo_impl.dart';
+import 'package:digital_trade_portal_driver/features/profile/presentation/view_models/driver_profile/driver_profile_cubit.dart';
+import 'package:digital_trade_portal_driver/features/routes/data/repos/routes_repo_impl.dart';
+import 'package:digital_trade_portal_driver/features/routes/presentation/view_models/today_route/today_route_cubit.dart';
+import 'package:digital_trade_portal_driver/core/utils/services/local_services/van_sale_queue.dart';
+import 'package:digital_trade_portal_driver/features/van_sales/data/repos/van_repo_impl.dart';
+import 'package:digital_trade_portal_driver/features/van_sales/presentation/view_models/van_trip/van_trip_cubit.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -46,7 +58,7 @@ Future _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
             priority: Priority.high,
             icon: 'notification_icon',
             colorized: true,
-            color: Color(0xff0090c2),
+            color: Color(0xff03745f),
           ),
           // ✅ إضافة إعدادات iOS للإشعارات المحلية
           iOS: DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
@@ -66,7 +78,7 @@ void _showLocalNotification(RemoteMessage message) {
     priority: Priority.high,
     icon: 'notification_icon',
     colorized: true,
-    color: Color(0xff0090c2),
+    color: Color(0xff03745f),
   );
 
   // ✅ إضافة إعدادات iOS للإشعارات المحلية
@@ -83,6 +95,17 @@ void _showLocalNotification(RemoteMessage message) {
     title: message.notification?.title,
     body: message.notification?.body,
     notificationDetails: platformDetails,
+  );
+}
+
+/// Route pushes (`click_action = route`: shipment / route canceled, stop
+/// removed) go to the cubits through the bus so the route is fetched again
+/// at once and the driver sees the alert on the route screen.
+void _publishRoutePush(RemoteMessage message) {
+  getIt.get<PushEventBus>().publishData(
+    message.data,
+    title: message.notification?.title,
+    body: message.notification?.body,
   );
 }
 
@@ -106,7 +129,7 @@ Future<void> _safeSubscribeToTopic(String topic) async {
 
     String? token = await FirebaseMessaging.instance.getToken();
     if (token != null) {
-      await CacheHelper.saveData(key: "deviceToken", value: token);
+      await CacheKeysManger.saveDeviceToken(token);
       debugPrint("Device Token: $token");
       await FirebaseMessaging.instance.subscribeToTopic(topic);
       debugPrint('Successfully subscribed to topic: $topic');
@@ -131,6 +154,10 @@ Future main() async {
   await initializeDateFormatting();
 
   await CacheHelper.init();
+
+  // Services first: the messaging callbacks below hand route pushes to
+  // the event bus registered here.
+  setup();
 
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -183,6 +210,7 @@ Future main() async {
   // Handlers
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
     debugPrint('onMessage received: ${message.messageId}');
+    _publishRoutePush(message);
     // ✅ على iOS لما التطبيق في الـ foreground:
     // setForegroundNotificationPresentationOptions بيتكفل بالعرض
     // للـ messages اللي فيها notification payload.
@@ -216,7 +244,7 @@ Future main() async {
               priority: Priority.high,
               icon: 'notification_icon',
               colorized: true,
-              color: Color(0xff0090c2),
+              color: Color(0xff03745f),
             ),
             iOS: DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
           ),
@@ -227,13 +255,14 @@ Future main() async {
 
   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
     debugPrint('onMessageOpenedApp data: ${message.data}');
+    _publishRoutePush(message);
   });
 
   // ✅ التعامل مع الإشعار اللي فتح التطبيق وهو مغلق
   RemoteMessage? initialMessage = await messaging.getInitialMessage();
   if (initialMessage != null) {
     debugPrint('App opened from terminated state with data: ${initialMessage.data}');
-    // هنا ممكن تعمل navigation بناءً على الـ data
+    _publishRoutePush(initialMessage);
   }
 
   _safeSubscribeToTopic('all');
@@ -242,7 +271,13 @@ Future main() async {
     await CacheHelper.saveData(key: 'lang', value: 'ar');
   }
 
-  setup();
+  // A refreshed FCM token must reach the backend (`POST /push/register`) or
+  // the driver silently stops receiving assignments.
+  FirebaseMessaging.instance.onTokenRefresh.listen((token) async {
+    await CacheKeysManger.saveDeviceToken(token);
+    _driverProfileCubit.registerPushToken();
+  });
+
   runApp(
     EasyLocalization(
       supportedLocales: const [Locale("ar"), Locale("en")],
@@ -254,6 +289,13 @@ Future main() async {
   );
 }
 
+/// Session wide cubits, created once so the token refresh listener above and
+/// every screen share the same instances.
+final DriverProfileCubit _driverProfileCubit = DriverProfileCubit(
+  profileRepo: getIt.get<ProfileRepoImpl>(),
+  notificationsRepo: getIt.get<NotificationsRepoImpl>(),
+);
+
 class DigitalTradePortalDriver extends StatelessWidget {
   const DigitalTradePortalDriver({super.key});
 
@@ -263,11 +305,31 @@ class DigitalTradePortalDriver extends StatelessWidget {
       providers: [
         BlocProvider(create: (context) => ChangeLanguageCubit()),
         BlocProvider(create: (context) => ChangeNavBarStatusCubit()),
+        BlocProvider.value(value: _driverProfileCubit),
+        BlocProvider(
+          create: (context) => TodayRouteCubit(
+            routesRepo: getIt.get<RoutesRepoImpl>(),
+            locationTracker: getIt.get<LocationTracker>(),
+            offlineQueue: getIt.get<OfflineQueue>(),
+            pushEvents: getIt.get<PushEventBus>(),
+          ),
+        ),
+        BlocProvider(
+          create: (context) => VanTripCubit(
+            vanRepo: getIt.get<VanRepoImpl>(),
+            routesRepo: getIt.get<RoutesRepoImpl>(),
+            saleQueue: getIt.get<VanSaleQueue>(),
+          ),
+        ),
+        BlocProvider(
+          create: (context) =>
+              NotificationsCubit(getIt.get<NotificationsRepoImpl>(), pushEvents: getIt.get<PushEventBus>()),
+        ),
       ],
       child: BlocBuilder<ChangeLanguageCubit, ChangeLanguageStates>(
         builder: (context, langState) {
           return MaterialApp.router(
-            title: "التجارة الرقمية مناديب",
+            title: "التكامل التجاري الرقمي مناديب",
             theme: themeDataLight,
             builder: (context, child) {
               return MediaQuery(

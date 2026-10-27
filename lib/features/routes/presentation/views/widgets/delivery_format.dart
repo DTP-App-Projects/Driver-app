@@ -36,9 +36,7 @@ class DeliveryFormat {
       return "eta_minutes".tr(namedArgs: {"minutes": number.format(minutes < 1 ? 1 : minutes)});
     }
 
-    return "eta_hours".tr(
-      namedArgs: {"hours": number.format(minutes ~/ 60), "minutes": number.format(minutes % 60)},
-    );
+    return "eta_hours".tr(namedArgs: {"hours": number.format(minutes ~/ 60), "minutes": number.format(minutes % 60)});
   }
 
   /// Road distance and drive time of a hop, e.g. "4.3 km • 12 min".

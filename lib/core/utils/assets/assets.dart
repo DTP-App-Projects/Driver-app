@@ -14,5 +14,4 @@ class AssetData {
   static const home = "assets/images/home/home.svg";
   static const route = "assets/images/home/route.svg";
   static const profile = "assets/images/home/profile.svg";
-
 }

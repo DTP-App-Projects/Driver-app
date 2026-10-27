@@ -116,7 +116,7 @@ class _NotificationsButton extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-             SvgPicture.asset(AssetData.notification),
+              SvgPicture.asset(AssetData.notification),
               if (hasUnread)
                 PositionedDirectional(
                   top: size * .24,

@@ -40,10 +40,7 @@ class NotificationItem extends StatelessWidget {
                 Container(
                   width: circleSize,
                   height: circleSize,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: notification.color.withValues(alpha: .10),
-                  ),
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: notification.color.withValues(alpha: .10)),
                   child: Icon(notification.icon, size: circleSize * .5, color: notification.color),
                 ),
                 SizedBox(width: AppConstants.width15(context)),

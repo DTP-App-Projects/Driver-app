@@ -29,10 +29,7 @@ class BottomNavBar extends StatelessWidget {
             child: Material(
               color: Colors.transparent,
               child: Row(
-                children: List.generate(
-                  navTabs.length,
-                  (index) => BottomNavBarItem(tab: navTabs[index], index: index),
-                ),
+                children: List.generate(navTabs.length, (index) => BottomNavBarItem(tab: navTabs[index], index: index)),
               ),
             ),
           ),

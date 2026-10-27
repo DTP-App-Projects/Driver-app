@@ -70,7 +70,6 @@ class LoginView extends StatelessWidget {
                           SizedBox(height: AppConstants.height20(context)),
                           const CustomLoginForm(),
                           SizedBox(height: AppConstants.height24(context)),
-
                         ],
                       ),
                     ),
@@ -96,5 +95,4 @@ class LoginView extends StatelessWidget {
       ],
     );
   }
-
 }

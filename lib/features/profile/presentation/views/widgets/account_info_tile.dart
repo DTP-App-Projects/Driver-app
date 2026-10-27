@@ -7,13 +7,7 @@ import 'package:digital_trade_portal_driver/core/utils/text_styles/styles.dart';
 /// it. [isLtr] keeps latin values such as an email or a phone number reading
 /// left to right while the app is in Arabic.
 class AccountInfoTile extends StatelessWidget {
-  const AccountInfoTile({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.value,
-    this.isLtr = false,
-  });
+  const AccountInfoTile({super.key, required this.icon, required this.label, required this.value, this.isLtr = false});
 
   final IconData icon;
   final String label;

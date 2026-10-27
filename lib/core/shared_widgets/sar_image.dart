@@ -13,14 +13,13 @@ class SarImage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        SizedBox(width: AppConstants.width5(context)/1.5,),
+        SizedBox(width: AppConstants.width5(context) / 1.5),
         SvgPicture.asset(
           AssetData.sar,
-          color: color??AppColors.neutralColor,
-          width:size?? MediaQuery.of(context).size.height*.016,
-          height: size??MediaQuery.of(context).size.height*.016,
+          color: color ?? AppColors.neutralColor,
+          width: size ?? MediaQuery.of(context).size.height * .016,
+          height: size ?? MediaQuery.of(context).size.height * .016,
         ),
-
       ],
     );
   }

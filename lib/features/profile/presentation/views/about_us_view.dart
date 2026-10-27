@@ -8,8 +8,15 @@ import 'package:digital_trade_portal_driver/core/shared_widgets/custom_app_bar.d
 import 'package:digital_trade_portal_driver/core/utils/assets/assets.dart';
 import 'package:digital_trade_portal_driver/core/utils/colors/colors.dart';
 import 'package:digital_trade_portal_driver/core/utils/constants.dart';
+import 'package:digital_trade_portal_driver/core/utils/services/remote_services/service_locator.dart';
 import 'package:digital_trade_portal_driver/core/utils/text_styles/styles.dart';
+import 'package:digital_trade_portal_driver/features/profile/data/models/content_models.dart';
+import 'package:digital_trade_portal_driver/features/profile/data/repos/profile_repo_impl.dart';
+import 'package:digital_trade_portal_driver/features/profile/presentation/view_models/content/content_cubit.dart';
+import 'package:digital_trade_portal_driver/features/profile/presentation/views/widgets/content_page_body.dart';
 
+/// About the company from `GET /api/abouts`; the bundled copy stays as the
+/// fallback while the request runs or when it fails.
 class AboutUsView extends StatefulWidget {
   const AboutUsView({super.key});
 
@@ -33,34 +40,36 @@ class _AboutUsViewState extends State<AboutUsView> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ChangeLanguageCubit, ChangeLanguageStates>(
-      builder: (context, langState) {
-        return Scaffold(
-          backgroundColor: const Color(0xffF5F7FA),
-          body: SafeArea(
-            child: Column(
-              children: [
-                CustomAppBar(title: "about_app".tr()),
-                Expanded(
-                  child: ListView(
-                    padding: EdgeInsets.fromLTRB(
-                      AppConstants.width20(context),
-                      AppConstants.height20(context),
-                      AppConstants.width20(context),
-                      AppConstants.height30(context),
+    return BlocProvider(
+      create: (context) => ContentCubit(getIt.get<ProfileRepoImpl>())..loadAbout(),
+      child: BlocBuilder<ChangeLanguageCubit, ChangeLanguageStates>(
+        builder: (context, langState) {
+          return Scaffold(
+            backgroundColor: const Color(0xffF5F7FA),
+            body: SafeArea(
+              child: Column(
+                children: [
+                  CustomAppBar(title: "about_app".tr()),
+                  Expanded(
+                    child: BlocBuilder<ContentCubit, ContentState>(
+                      builder: (context, state) {
+                        final page = state is ContentPageSuccessState && !state.page.isEmpty
+                            ? state.page
+                            : ContentPageModel(title: "about_company".tr(), body: "about_description".tr());
+                        return ContentPageBody(
+                          page: page,
+                          fallbackTitle: "about_company".tr(),
+                          header: _buildIdentity(context),
+                        );
+                      },
                     ),
-                    children: [
-                      _buildIdentity(context),
-                      SizedBox(height: AppConstants.height30(context)),
-                      _buildDetailsCard(context),
-                    ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -79,32 +88,6 @@ class _AboutUsViewState extends State<AboutUsView> {
             style: Styles.font12MediumGrey46(context).copyWith(color: AppColors.neutralColor[400]),
           ),
       ],
-    );
-  }
-
-  Widget _buildDetailsCard(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(AppConstants.sp20(context)),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppConstants.sp20(context)),
-        border: Border.all(color: const Color(0xffEDEFF2)),
-        boxShadow: [
-          BoxShadow(color: AppColors.neutralColor.withValues(alpha: .04), blurRadius: 20, offset: const Offset(0, 8)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text("about_company".tr(), style: Styles.font18SemiBoldBlack(context)),
-          SizedBox(height: AppConstants.height15(context)),
-          Text(
-            "about_description".tr(),
-            textAlign: TextAlign.justify,
-            style: Styles.font12MediumGrey46(context).copyWith(height: 1.9),
-          ),
-        ],
-      ),
     );
   }
 }

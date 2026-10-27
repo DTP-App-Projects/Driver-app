@@ -4,6 +4,6 @@ abstract class ChangeNavBarStatusState {}
 
 class ChangeNavBarStatusInitial extends ChangeNavBarStatusState {}
 
-
 class ChangeNavBarStatusSuccessState extends ChangeNavBarStatusState {}
+
 class ChangeAppLanguageState extends ChangeNavBarStatusState {}

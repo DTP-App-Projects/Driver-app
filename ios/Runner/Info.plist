@@ -45,6 +45,10 @@
 	<string>Your location is shown on the route map so you can follow your delivery stops.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Your location is shown on the route map so you can follow your delivery stops.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>The camera is used to take proof photos and to scan barcodes and the trader's handoff QR at pickup and delivery stops.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Photos are attached to incident reports and your profile.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

@@ -9,10 +9,10 @@ class CustomLoadingItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return  Center(
+    return Center(
       child: SpinKitFadingCircle(
-        color: color??AppColors.primaryColor,
-        size:size?? MediaQuery.of(context).size.width*0.12,
+        color: color ?? AppColors.primaryColor,
+        size: size ?? MediaQuery.of(context).size.width * 0.12,
       ),
     );
   }

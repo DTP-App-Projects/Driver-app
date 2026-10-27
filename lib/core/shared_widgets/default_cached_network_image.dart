@@ -8,12 +8,7 @@ class DefaultCachedNetworkImage extends StatelessWidget {
   final double? imageWidth;
   final double? imageHeight;
   final BoxFit? fit;
-  const DefaultCachedNetworkImage({
-    super.key,
-    required this.imageUrl,
-     this.imageHeight,
-     this.imageWidth, this.fit,
-  });
+  const DefaultCachedNetworkImage({super.key, required this.imageUrl, this.imageHeight, this.imageWidth, this.fit});
 
   @override
   Widget build(BuildContext context) {
@@ -33,8 +28,11 @@ class DefaultCachedNetworkImage extends StatelessWidget {
           ),
         ),
       ),
-      errorWidget: (context, url, error) => Image.network("https://www.lebistrotduchateau.fr/uploads/q8T5D4JA/767x0_2560x0/photounavailable412.jpg",fit: BoxFit.fill,),
-      fit: fit??BoxFit.fill,
+      errorWidget: (context, url, error) => Image.network(
+        "https://www.lebistrotduchateau.fr/uploads/q8T5D4JA/767x0_2560x0/photounavailable412.jpg",
+        fit: BoxFit.fill,
+      ),
+      fit: fit ?? BoxFit.fill,
     );
   }
 }

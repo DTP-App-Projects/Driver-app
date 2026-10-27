@@ -10,7 +10,7 @@ class CustomBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return  GestureDetector(
+    return GestureDetector(
       onTap: () {
         NavigationUtils.navigateBack(context: context);
       },
@@ -19,8 +19,9 @@ class CustomBackButton extends StatelessWidget {
         padding: EdgeInsets.all(AppConstants.sp5(context)),
         decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
         child: RotatedBox(
-            quarterTurns: CacheKeysManger.getUserLanguage()=="ar"?2:0,
-            child: SvgPicture.asset(AssetData.back)),
+          quarterTurns: CacheKeysManger.getUserLanguage() == "ar" ? 2 : 0,
+          child: SvgPicture.asset(AssetData.back),
+        ),
       ),
     );
   }

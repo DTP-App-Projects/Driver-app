@@ -1,11 +1,14 @@
 import 'dart:math';
 
-import 'package:easy_localization/easy_localization.dart';
+import 'package:easy_localization/easy_localization.dart' hide TextDirection;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:digital_trade_portal_driver/core/utils/colors/colors.dart';
 import 'package:digital_trade_portal_driver/core/utils/constants.dart';
+import 'package:digital_trade_portal_driver/core/utils/services/remote_services/endpoints.dart';
 import 'package:digital_trade_portal_driver/core/utils/text_styles/styles.dart';
 import 'package:digital_trade_portal_driver/features/routes/data/models/route_model.dart';
 import 'package:digital_trade_portal_driver/features/routes/presentation/view_models/delivery_tracking/delivery_tracking_cubit.dart';
@@ -26,15 +29,39 @@ class DeliveryMap extends StatefulWidget {
   State<DeliveryMap> createState() => _DeliveryMapState();
 }
 
-class _DeliveryMapState extends State<DeliveryMap> {
-  GoogleMapController? mapController;
+class _DeliveryMapState extends State<DeliveryMap> with SingleTickerProviderStateMixin {
+  final mapController = MapController();
+  late final cameraAnimation = AnimationController(vsync: this, duration: const Duration(milliseconds: 600))
+    ..addListener(_stepCamera);
+  late final cameraCurve = CurvedAnimation(parent: cameraAnimation, curve: Curves.easeInOutCubic);
+  bool isMapReady = false;
   int handledCameraToken = 0;
+
+  /// Start and end of the camera glide in flight.
+  Tween<double> latitudeTween = Tween(), longitudeTween = Tween(), zoomTween = Tween();
 
   @override
   void dispose() {
-    mapController?.dispose();
+    cameraCurve.dispose();
+    cameraAnimation.dispose();
+    mapController.dispose();
     super.dispose();
   }
+
+  /// Glides the camera from where it is to [target] at [zoom]. A new move
+  /// takes over from one still running.
+  void _animateTo(LatLng target, double zoom) {
+    final camera = mapController.camera;
+    latitudeTween = Tween(begin: camera.center.latitude, end: target.latitude);
+    longitudeTween = Tween(begin: camera.center.longitude, end: target.longitude);
+    zoomTween = Tween(begin: camera.zoom, end: zoom);
+    cameraAnimation.forward(from: 0);
+  }
+
+  void _stepCamera() => mapController.move(
+    LatLng(latitudeTween.evaluate(cameraCurve), longitudeTween.evaluate(cameraCurve)),
+    zoomTween.evaluate(cameraCurve),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +71,6 @@ class _DeliveryMapState extends State<DeliveryMap> {
       listenWhen: (previous, current) => current.camera != null && current.camera!.token != handledCameraToken,
       listener: (context, state) => _runCameraCommand(state),
       builder: (context, state) {
-        final focus = state.stops[state.currentStopIndex ?? 0];
         // Full screen puts the controls below the status bar and back button.
         final topInset = state.isMapExpanded
             ? MediaQuery.of(context).padding.top + AppConstants.height10(context)
@@ -52,18 +78,38 @@ class _DeliveryMapState extends State<DeliveryMap> {
 
         return Stack(
           children: [
-            GoogleMap(
-              initialCameraPosition: CameraPosition(target: LatLng(focus.latitude, focus.longitude), zoom: 12),
-              markers: _buildMarkers(state),
-              polylines: _buildPolylines(state),
-              myLocationEnabled: state.locationFailure == null,
-              zoomControlsEnabled: false,
-              mapToolbarEnabled: false,
-              myLocationButtonEnabled: false,
-              onMapCreated: (controller) {
-                mapController = controller;
-                if (state.driverPosition == null) _fitRoute(state);
-              },
+            FlutterMap(
+              mapController: mapController,
+              options: MapOptions(
+                initialCenter: _initialTarget(state),
+                initialZoom: 12,
+                interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
+                // A drag or pinch wins over a glide still running.
+                onPositionChanged: (camera, hasGesture) {
+                  if (hasGesture) cameraAnimation.stop();
+                },
+                onMapReady: () {
+                  isMapReady = true;
+                  if (state.driverPosition == null) _fitRoute(state);
+                },
+              ),
+              children: [
+                TileLayer(urlTemplate: EndPoints.osmTileUrl, userAgentPackageName: EndPoints.osmUserAgent),
+                PolylineLayer(polylines: _buildPolylines(state)),
+                MarkerLayer(markers: [..._buildMarkers(state), ?_buildDriverMarker(state)]),
+                // The hint sits on the start side, so the attribution takes the end.
+                RichAttributionWidget(
+                  alignment: Directionality.of(context) == TextDirection.rtl
+                      ? AttributionAlignment.bottomLeft
+                      : AttributionAlignment.bottomRight,
+                  attributions: [
+                    TextSourceAttribution(
+                      "OpenStreetMap contributors",
+                      onTap: () => launchUrl(Uri.parse("https://openstreetmap.org/copyright")),
+                    ),
+                  ],
+                ),
+              ],
             ),
             PositionedDirectional(
               top: topInset,
@@ -171,70 +217,125 @@ class _DeliveryMapState extends State<DeliveryMap> {
     );
   }
 
-  Set<Marker> _buildMarkers(DeliveryTrackingState state) {
-    final current = state.currentStopIndex;
-
-    return {
-      for (int i = 0; i < state.stops.length; i++)
-        Marker(
-          markerId: MarkerId("stop_$i"),
-          position: LatLng(state.stops[i].latitude, state.stops[i].longitude),
-          icon: BitmapDescriptor.defaultMarkerWithHue(_markerHue(state.stops[i].status)),
-          infoWindow: InfoWindow(
-            title: "${i + 1}. ${state.stops[i].name}",
-            snippet: "${state.stops[i].type.titleKey.tr()} • ${state.stops[i].status.titleKey.tr()}",
-            onTap: () => widget.onStopTap(i),
-          ),
-          onTap: () => widget.onStopTap(i),
-          // The stop being worked on stays on top of the ones around it.
-          zIndexInt: i == current ? 1 : 0,
-        ),
-    };
+  /// Where the map opens: the stop being worked on, else the first stop with
+  /// coordinates, else the driver, else a neutral default.
+  LatLng _initialTarget(DeliveryTrackingState state) {
+    final current = state.currentStop;
+    if (current != null && current.hasLocation) return LatLng(current.latitude!, current.longitude!);
+    for (final stop in state.stops) {
+      if (stop.hasLocation) return LatLng(stop.latitude!, stop.longitude!);
+    }
+    final position = state.driverPosition;
+    if (position != null) return LatLng(position.latitude, position.longitude);
+    return const LatLng(24.7136, 46.6753);
   }
 
-  double _markerHue(StopStatus status) => switch (status) {
-    StopStatus.pending => BitmapDescriptor.hueAzure,
-    StopStatus.arrived => BitmapDescriptor.hueOrange,
-    StopStatus.completed => BitmapDescriptor.hueGreen,
+  /// The driver blue dot, hidden without a fix or location access.
+  Marker? _buildDriverMarker(DeliveryTrackingState state) {
+    final position = state.driverPosition;
+    if (position == null || state.locationFailure != null) return null;
+
+    return Marker(
+      point: LatLng(position.latitude, position.longitude),
+      width: 22,
+      height: 22,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.blue,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 3),
+          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+        ),
+      ),
+    );
+  }
+
+  /// Stops without coordinates cannot be placed, so they get no marker.
+  List<Marker> _buildMarkers(DeliveryTrackingState state) {
+    final current = state.currentStopIndex;
+    final size = MediaQuery.of(context).size.height * .05;
+
+    return [
+      for (int i = 0; i < state.stops.length; i++)
+        if (state.stops[i].hasLocation && i != current) _buildStopMarker(state, i, size),
+      // Painted last so the stop being worked on stays on top of the ones around it.
+      if (current != null && state.stops[current].hasLocation) _buildStopMarker(state, current, size),
+    ];
+  }
+
+  Marker _buildStopMarker(DeliveryTrackingState state, int index, double size) {
+    final stop = state.stops[index];
+
+    return Marker(
+      point: LatLng(stop.latitude!, stop.longitude!),
+      width: size,
+      height: size,
+      // The pin tip, not its centre, sits on the stop.
+      alignment: Alignment.topCenter,
+      child: GestureDetector(
+        onTap: () => widget.onStopTap(index),
+        child: Stack(
+          alignment: Alignment.topCenter,
+          children: [
+            Icon(Icons.location_on, size: size, color: _markerColor(stop.status)),
+            Padding(
+              padding: EdgeInsets.only(top: size * .14),
+              child: Text(
+                "${index + 1}",
+                style: TextStyle(color: Colors.white, fontSize: size * .26, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _markerColor(StopStatus status) => switch (status) {
+    StopStatus.pending => Colors.lightBlue,
+    StopStatus.enRoute => Colors.blue.shade700,
+    StopStatus.arrived => Colors.orange,
+    StopStatus.completed => Colors.green,
+    StopStatus.skipped => Colors.red,
+    StopStatus.canceled => Colors.pink,
   };
 
   /// One line per hop, drawn on the roads: the leg the driver is on now is
   /// solid, the hops after it are dashed so the order stays readable.
-  Set<Polyline> _buildPolylines(DeliveryTrackingState state) {
+  List<Polyline> _buildPolylines(DeliveryTrackingState state) {
     final legs = state.directions?.legs;
 
     if (legs != null && legs.isNotEmpty) {
-      return {
-        for (int i = 0; i < legs.length; i++)
+      return [
+        // Reversed so the active leg is painted over the dashed ones.
+        for (int i = legs.length - 1; i >= 0; i--)
           Polyline(
-            polylineId: PolylineId("leg_$i"),
             points: legs[i].points,
             color: i == 0 ? AppColors.red : AppColors.red.withValues(alpha: .45),
-            width: i == 0 ? 6 : 4,
-            patterns: i == 0 ? const [] : [PatternItem.dash(20), PatternItem.gap(12)],
+            strokeWidth: i == 0 ? 5 : 4,
+            pattern: i == 0 ? const StrokePattern.solid() : StrokePattern.dashed(segments: const [20, 12]),
           ),
-      };
+      ];
     }
 
-    // No road path yet (no fix, or the Routes request failed): fall back to
+    // No road path yet (no fix, or the routing request failed): fall back to
     // straight hops so the order of the stops is still visible.
     final position = state.driverPosition;
     final points = [
       if (position != null) LatLng(position.latitude, position.longitude),
-      for (final stop in state.remainingStops) LatLng(stop.latitude, stop.longitude),
+      for (final stop in state.remainingStops) LatLng(stop.latitude!, stop.longitude!),
     ];
 
-    if (points.length < 2) return const {};
+    if (points.length < 2) return const [];
 
-    return {
+    return [
       Polyline(
-        polylineId: const PolylineId("route_fallback"),
         points: points,
         color: AppColors.red.withValues(alpha: .55),
-        width: 4,
-        patterns: [PatternItem.dash(20), PatternItem.gap(12)],
+        strokeWidth: 4,
+        pattern: StrokePattern.dashed(segments: const [20, 12]),
       ),
-    };
+    ];
   }
 
   void _runCameraCommand(DeliveryTrackingState state) {
@@ -247,37 +348,39 @@ class _DeliveryMapState extends State<DeliveryMap> {
     }
 
     final target = command.target;
-    if (target != null) mapController?.animateCamera(CameraUpdate.newLatLngZoom(target, command.zoom));
+    if (target != null && isMapReady) _animateTo(target, command.zoom);
   }
 
   /// Zooms out until the whole route, and the driver with it, fits on screen.
   void _fitRoute(DeliveryTrackingState state) {
-    final controller = mapController;
-    if (controller == null || state.stops.isEmpty) return;
+    if (!isMapReady) return;
 
     final position = state.driverPosition;
-    final latitudes = [
-      for (final stop in state.stops) stop.latitude,
+    final latitudes = <double>[
+      for (final stop in state.stops)
+        if (stop.hasLocation) stop.latitude!,
       if (position != null) position.latitude,
     ];
-    final longitudes = [
-      for (final stop in state.stops) stop.longitude,
+    final longitudes = <double>[
+      for (final stop in state.stops)
+        if (stop.hasLocation) stop.longitude!,
       if (position != null) position.longitude,
     ];
 
+    if (latitudes.isEmpty) return;
     if (latitudes.length == 1) {
-      controller.animateCamera(CameraUpdate.newLatLngZoom(LatLng(latitudes.first, longitudes.first), 14));
+      _animateTo(LatLng(latitudes.first, longitudes.first), 14);
       return;
     }
 
-    controller.animateCamera(
-      CameraUpdate.newLatLngBounds(
-        LatLngBounds(
-          southwest: LatLng(latitudes.reduce(min), longitudes.reduce(min)),
-          northeast: LatLng(latitudes.reduce(max), longitudes.reduce(max)),
-        ),
-        50,
+    // Work out where the camera has to end up, then glide there.
+    final fitted = CameraFit.bounds(
+      bounds: LatLngBounds(
+        LatLng(latitudes.reduce(min), longitudes.reduce(min)),
+        LatLng(latitudes.reduce(max), longitudes.reduce(max)),
       ),
-    );
+      padding: const EdgeInsets.all(50),
+    ).fit(mapController.camera);
+    _animateTo(fitted.center, fitted.zoom);
   }
 }

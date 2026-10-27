@@ -43,11 +43,7 @@ class VehicleItem extends StatelessWidget {
                     shape: BoxShape.circle,
                     color: AppColors.primarySwatchColor.withValues(alpha: .10),
                   ),
-                  child: Icon(
-                    vehicle.type.icon,
-                    size: circleSize * .52,
-                    color: AppColors.primarySwatchColor,
-                  ),
+                  child: Icon(vehicle.type.icon, size: circleSize * .52, color: AppColors.primarySwatchColor),
                 ),
                 SizedBox(width: AppConstants.width15(context)),
                 Expanded(

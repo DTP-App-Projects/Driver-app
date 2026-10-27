@@ -10,23 +10,51 @@ import 'package:digital_trade_portal_driver/core/shared_cubits/change_language/c
 import 'package:digital_trade_portal_driver/core/shared_widgets/custom_button.dart';
 import 'package:digital_trade_portal_driver/core/shared_widgets/custom_dropdown_formfield.dart';
 import 'package:digital_trade_portal_driver/core/shared_widgets/default_text_form_field.dart';
+import 'package:digital_trade_portal_driver/core/shared_widgets/loading_dialog.dart';
 import 'package:digital_trade_portal_driver/core/shared_widgets/toast.dart';
 import 'package:digital_trade_portal_driver/core/utils/colors/colors.dart';
 import 'package:digital_trade_portal_driver/core/utils/constants.dart';
 import 'package:digital_trade_portal_driver/core/utils/navigation_utility.dart';
+import 'package:digital_trade_portal_driver/core/utils/services/local_services/offline_queue.dart';
+import 'package:digital_trade_portal_driver/core/utils/services/remote_services/service_locator.dart';
 import 'package:digital_trade_portal_driver/core/utils/text_styles/styles.dart';
 import 'package:digital_trade_portal_driver/features/emergency/data/models/issue_type.dart';
+import 'package:digital_trade_portal_driver/features/emergency/data/repos/incidents_repo_impl.dart';
+import 'package:digital_trade_portal_driver/features/emergency/presentation/view_models/report_incident/report_incident_cubit.dart';
 import 'package:digital_trade_portal_driver/features/emergency/presentation/views/widgets/attachments_picker.dart';
 import 'package:digital_trade_portal_driver/features/emergency/presentation/views/widgets/issue_type_grid.dart';
+import 'package:digital_trade_portal_driver/features/routes/data/repos/routes_repo_impl.dart';
+import 'package:digital_trade_portal_driver/features/routes/presentation/view_models/today_route/today_route_cubit.dart';
 
-class EmergencyView extends StatefulWidget {
-  const EmergencyView({super.key});
+class EmergencyView extends StatelessWidget {
+  const EmergencyView({super.key, this.stopId});
+
+  /// Set when the report is opened from a stop, to link the incident to it.
+  final int? stopId;
 
   @override
-  State<EmergencyView> createState() => _EmergencyViewState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => ReportIncidentCubit(
+        incidentsRepo: getIt.get<IncidentsRepoImpl>(),
+        routesRepo: getIt.get<RoutesRepoImpl>(),
+        offlineQueue: getIt.get<OfflineQueue>(),
+      ),
+      child: _EmergencyBody(stopId: stopId),
+    );
+  }
 }
 
-class _EmergencyViewState extends State<EmergencyView> {
+class _EmergencyBody extends StatefulWidget {
+  const _EmergencyBody({this.stopId});
+
+  final int? stopId;
+
+  @override
+  State<_EmergencyBody> createState() => _EmergencyViewState();
+}
+
+class _EmergencyViewState extends State<_EmergencyBody> {
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
   final TextEditingController description = TextEditingController();
   final List<File> images = [];
@@ -56,23 +84,48 @@ class _EmergencyViewState extends State<EmergencyView> {
     }
     if (!formKey.currentState!.validate()) return;
 
-    // TODO: post the report once the endpoint exists.
-    toast(text: "report_sent".tr(), context: context);
-    NavigationUtils.navigateBack(context: context);
+    // The active route is attached when there is one; the server falls back
+    // to today's route otherwise.
+    context.read<ReportIncidentCubit>().report(
+      type: selectedType!,
+      severity: severity,
+      description: description.text.trim(),
+      photos: images,
+      routeId: context.read<TodayRouteCubit>().state.activeRoute?.id,
+      stopId: widget.stopId,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ChangeLanguageCubit, ChangeLanguageStates>(
       builder: (context, langState) {
-        return Scaffold(
-          backgroundColor: const Color(0xffF5F7FA),
-          body: SafeArea(
-            child: Column(
-              children: [
-                CustomAppBar(title: "report_issue".tr()),
-                Expanded(child: _buildForm(context)),
-              ],
+        return BlocListener<ReportIncidentCubit, ReportIncidentState>(
+          listener: (context, state) {
+            if (state is ReportIncidentLoadingState) {
+              LoadingDialog().show(context);
+            } else if (state is ReportIncidentSuccessState) {
+              LoadingDialog().hide();
+              toast(text: "report_sent".tr(), context: context);
+              NavigationUtils.navigateBack(context: context);
+            } else if (state is ReportIncidentQueuedState) {
+              LoadingDialog().hide();
+              toast(text: "report_queued".tr(), context: context);
+              NavigationUtils.navigateBack(context: context);
+            } else if (state is ReportIncidentErrorState) {
+              LoadingDialog().hide();
+              toast(text: state.errMessage, context: context, isSuccess: false);
+            }
+          },
+          child: Scaffold(
+            backgroundColor: const Color(0xffF5F7FA),
+            body: SafeArea(
+              child: Column(
+                children: [
+                  CustomAppBar(title: "report_issue".tr()),
+                  Expanded(child: _buildForm(context)),
+                ],
+              ),
             ),
           ),
         );
@@ -92,10 +145,7 @@ class _EmergencyViewState extends State<EmergencyView> {
         ),
         children: [
           _SectionLabel(title: "issue_type".tr()),
-          IssueTypeGrid(
-            selected: selectedType,
-            onSelect: (type) => setState(() => selectedType = type),
-          ),
+          IssueTypeGrid(selected: selectedType, onSelect: (type) => setState(() => selectedType = type)),
           SizedBox(height: AppConstants.height24(context)),
           _SectionLabel(title: "severity".tr()),
           _buildSeverityField(context),
@@ -120,15 +170,20 @@ class _EmergencyViewState extends State<EmergencyView> {
             onRemove: (index) => setState(() => images.removeAt(index)),
           ),
           SizedBox(height: AppConstants.height30(context)),
-          SizedBox(
-            width: double.infinity,
-            child: DefaultButton(
-              onPress: submit,
-              text: "send_report".tr(),
-              borderRadius: AppConstants.sp15(context),
-              gradient: AppColors.brandGradient,
-              elevation: 0,
-            ),
+          BlocBuilder<ReportIncidentCubit, ReportIncidentState>(
+            builder: (context, state) {
+              return SizedBox(
+                width: double.infinity,
+                child: DefaultButton(
+                  onPress: submit,
+                  text: "send_report".tr(),
+                  borderRadius: AppConstants.sp15(context),
+                  gradient: AppColors.brandGradient,
+                  isEnabled: state is! ReportIncidentLoadingState,
+                  elevation: 0,
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -161,10 +216,7 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsetsDirectional.only(
-        start: AppConstants.width5(context),
-        bottom: AppConstants.height10(context),
-      ),
+      padding: EdgeInsetsDirectional.only(start: AppConstants.width5(context), bottom: AppConstants.height10(context)),
       child: Text(title, style: Styles.font12BoldBlack(context).copyWith(color: AppColors.grey46)),
     );
   }

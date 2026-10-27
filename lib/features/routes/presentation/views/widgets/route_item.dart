@@ -69,7 +69,10 @@ class RouteItem extends StatelessWidget {
           ],
         ),
         SizedBox(height: AppConstants.height5(context)),
-        Text(DateFormat("d MMMM y • h:mm a", locale).format(route.date), style: Styles.font11MediumGrey46(context)),
+        Text(
+          DateFormat(route.hasTime ? "d MMMM y • h:mm a" : "d MMMM y", locale).format(route.date),
+          style: Styles.font11MediumGrey46(context),
+        ),
         SizedBox(height: AppConstants.height10(context)),
         Row(
           children: [
@@ -84,11 +87,12 @@ class RouteItem extends StatelessWidget {
               ),
             ),
             SizedBox(width: AppConstants.width15(context)),
-            _buildMeta(
-              context,
-              icon: Icons.straighten_rounded,
-              text: "distance_km".tr(namedArgs: {"distance": NumberFormat("#0.#", locale).format(route.distanceKm)}),
-            ),
+            if (route.distanceKm != null)
+              _buildMeta(
+                context,
+                icon: Icons.straighten_rounded,
+                text: "distance_km".tr(namedArgs: {"distance": NumberFormat("#0.#", locale).format(route.distanceKm)}),
+              ),
           ],
         ),
       ],
@@ -106,8 +110,11 @@ class RouteItem extends StatelessWidget {
     );
   }
 
+  /// Server status of the route; an overdue one is flagged in the danger
+  /// colour, as the API asks (`late_routes`).
   Widget _buildStatusChip(BuildContext context) {
-    final color = route.isCompleted ? AppColors.secondaryColor : const Color(0xffE8A317);
+    final bool isLate = route.isLate;
+    final color = isLate ? AppColors.red : route.status.color;
 
     return Container(
       padding: EdgeInsets.symmetric(
@@ -119,7 +126,7 @@ class RouteItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppConstants.sp30(context)),
       ),
       child: Text(
-        (route.isCompleted ? "route_completed" : "route_in_progress").tr(),
+        (isLate ? "route_late" : route.status.titleKey).tr(),
         style: Styles.font10MediumBlack(context).copyWith(color: color, fontWeight: FontWeight.w700),
       ),
     );

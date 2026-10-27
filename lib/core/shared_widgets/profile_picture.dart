@@ -37,23 +37,27 @@ class ProfilePicture extends StatelessWidget {
               child: (imageLink == null)
                   ? null
                   : (imageType == ImageType.file)
-                      ? Image.file(imageLink,
-                          height:size?? MediaQuery.of(context).size.height * 0.1,
-                          width: size??MediaQuery.of(context).size.height * 0.1,
-                          fit: fit ?? BoxFit.cover)
-                      : (imageType == ImageType.network)
-                          ? DefaultCachedNetworkImage(
-                              imageUrl: imageLink,
-                              imageHeight:size?? MediaQuery.of(context).size.height * 0.1,
-                              imageWidth:size?? MediaQuery.of(context).size.height * 0.1,
-                              fit: fit ?? BoxFit.cover,
-                            )
-                          : (imageType == ImageType.asset)
-                              ?  Image.asset(imageLink,
-                                      height:size?? MediaQuery.of(context).size.height * 0.1,
-                                      width:size?? MediaQuery.of(context).size.height * 0.1,
-                                      fit: fit ?? BoxFit.cover)
-                              : null,
+                  ? Image.file(
+                      imageLink,
+                      height: size ?? MediaQuery.of(context).size.height * 0.1,
+                      width: size ?? MediaQuery.of(context).size.height * 0.1,
+                      fit: fit ?? BoxFit.cover,
+                    )
+                  : (imageType == ImageType.network)
+                  ? DefaultCachedNetworkImage(
+                      imageUrl: imageLink,
+                      imageHeight: size ?? MediaQuery.of(context).size.height * 0.1,
+                      imageWidth: size ?? MediaQuery.of(context).size.height * 0.1,
+                      fit: fit ?? BoxFit.cover,
+                    )
+                  : (imageType == ImageType.asset)
+                  ? Image.asset(
+                      imageLink,
+                      height: size ?? MediaQuery.of(context).size.height * 0.1,
+                      width: size ?? MediaQuery.of(context).size.height * 0.1,
+                      fit: fit ?? BoxFit.cover,
+                    )
+                  : null,
             ),
             if (hasEdit)
               Container(
@@ -61,16 +65,10 @@ class ProfilePicture extends StatelessWidget {
                 padding: const EdgeInsets.all(1),
                 decoration: BoxDecoration(
                   color: AppColors.primaryColor,
-                  borderRadius: BorderRadius.circular(
-                    AppConstants.sp5(context),
-                  ),
+                  borderRadius: BorderRadius.circular(AppConstants.sp5(context)),
                 ),
-                child: Icon(
-                  Icons.edit,
-                  color: Colors.white,
-                  size: AppConstants.sp20(context),
-                ),
-              )
+                child: Icon(Icons.edit, color: Colors.white, size: AppConstants.sp20(context)),
+              ),
           ],
         ),
       ),

@@ -56,9 +56,7 @@ class ProfileHeader extends StatelessWidget {
                       Text(
                         phone,
                         textDirection: TextDirection.ltr,
-                        style: Styles.font12MediumBlack(
-                          context,
-                        ).copyWith(color: Colors.white.withValues(alpha: .80)),
+                        style: Styles.font12MediumBlack(context).copyWith(color: Colors.white.withValues(alpha: .80)),
                       ),
                     ],
                   ),
@@ -84,10 +82,7 @@ class ProfileHeader extends StatelessWidget {
         color: Colors.white,
         border: Border.all(color: Colors.white.withValues(alpha: .55), width: 3),
       ),
-      child: Text(
-        _initial,
-        style: Styles.font24BoldBlack(context).copyWith(color: AppColors.primarySwatchColor),
-      ),
+      child: Text(_initial, style: Styles.font24BoldBlack(context).copyWith(color: AppColors.primarySwatchColor)),
     );
   }
 
@@ -95,10 +90,7 @@ class ProfileHeader extends StatelessWidget {
     final dotSize = MediaQuery.of(context).size.height * .009;
 
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: AppConstants.width15(context),
-        vertical: AppConstants.height5(context),
-      ),
+      padding: EdgeInsets.symmetric(horizontal: AppConstants.width15(context), vertical: AppConstants.height5(context)),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: .18),
         borderRadius: BorderRadius.circular(AppConstants.sp30(context)),

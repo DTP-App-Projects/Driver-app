@@ -19,10 +19,7 @@ class LoadingDialog {
     _overlayEntry = OverlayEntry(
       builder: (context) => Stack(
         children: [
-          ModalBarrier(
-            dismissible: false,
-            color: Colors.black.withOpacity(0.3),
-          ),
+          ModalBarrier(dismissible: false, color: Colors.black.withOpacity(0.3)),
           Center(
             child: Container(
               padding: EdgeInsets.all(AppConstants.sp30(context) * 1.5),
@@ -33,9 +30,7 @@ class LoadingDialog {
               child: SizedBox(
                 width: AppConstants.height30(context),
                 height: AppConstants.height30(context),
-                child: CircularProgressIndicator(
-                  color: AppColors.primaryColor,
-                ),
+                child: CircularProgressIndicator(color: AppColors.primaryColor),
               ),
             ),
           ),

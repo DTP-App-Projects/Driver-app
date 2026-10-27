@@ -19,16 +19,8 @@ class ProfileStats extends StatelessWidget {
 
     return StatCardsRow(
       cards: [
-        StatCard(
-          label: "deliveries".tr(),
-          value: number.format(deliveries),
-          color: AppColors.primarySwatchColor,
-        ),
-        StatCard(
-          label: "pickups".tr(),
-          value: number.format(pickups),
-          color: AppColors.secondaryColor,
-        ),
+        StatCard(label: "deliveries".tr(), value: number.format(deliveries), color: AppColors.primarySwatchColor),
+        StatCard(label: "pickups".tr(), value: number.format(pickups), color: AppColors.secondaryColor),
         StatCard(
           label: "rating".tr(),
           value: NumberFormat("#0.0", locale).format(rating),

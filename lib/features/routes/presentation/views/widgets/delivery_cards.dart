@@ -4,12 +4,21 @@ import 'package:digital_trade_portal_driver/core/shared_widgets/custom_button.da
 import 'package:digital_trade_portal_driver/core/utils/colors/colors.dart';
 import 'package:digital_trade_portal_driver/core/utils/constants.dart';
 import 'package:digital_trade_portal_driver/core/utils/text_styles/styles.dart';
+import 'package:digital_trade_portal_driver/core/shared_widgets/info_row.dart';
 import 'package:digital_trade_portal_driver/features/routes/data/models/route_model.dart';
+import 'package:digital_trade_portal_driver/features/routes/presentation/views/widgets/delivery_format.dart';
 
 /// The stop the driver is on, with the one action that moves it forward and
 /// the live distance or drive time to it.
 class CurrentStopCard extends StatelessWidget {
-  const CurrentStopCard({super.key, required this.stop, required this.onAction, this.summary});
+  const CurrentStopCard({
+    super.key,
+    required this.stop,
+    required this.onAction,
+    this.summary,
+    this.isBusy = false,
+    this.isPendingSync = false,
+  });
 
   final RouteStop stop;
   final VoidCallback onAction;
@@ -17,10 +26,28 @@ class CurrentStopCard extends StatelessWidget {
   /// Road distance and drive time, or the straight line distance as a fallback.
   final String? summary;
 
+  /// A request for this stop is in flight: the button waits for it.
+  final bool isBusy;
+
+  /// The last action is queued offline.
+  final bool isPendingSync;
+
+  /// The one action the server accepts next for this stop.
+  String get _actionKey => switch (stop.status) {
+    StopStatus.pending => "head_to_stop",
+    StopStatus.enRoute => "mark_arrived",
+    StopStatus.arrived => stop.type.confirmKey,
+    _ => "complete_stop",
+  };
+
+  IconData get _actionIcon => switch (stop.status) {
+    StopStatus.pending => Icons.navigation_rounded,
+    StopStatus.enRoute => Icons.location_on_outlined,
+    _ => stop.isReturn ? Icons.assignment_return_outlined : Icons.check_circle_outline_rounded,
+  };
+
   @override
   Widget build(BuildContext context) {
-    final isArrived = stop.status == StopStatus.arrived;
-
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(AppConstants.sp20(context)),
@@ -46,29 +73,24 @@ class CurrentStopCard extends StatelessWidget {
               SizedBox(width: AppConstants.width5(context)),
               Expanded(child: Text("current_stop".tr(), style: Styles.font12MediumGrey46(context))),
               if (summary != null)
-                Text(
-                  summary!,
-                  style: Styles.font11BoldBlack(context).copyWith(color: AppColors.primarySwatchColor),
-                ),
+                Text(summary!, style: Styles.font11BoldBlack(context).copyWith(color: AppColors.primarySwatchColor)),
             ],
           ),
           SizedBox(height: AppConstants.height10(context)),
           Text(stop.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Styles.font16SemiBoldBlack(context)),
           SizedBox(height: AppConstants.height5(context)),
           Text(
-            "${stop.type.titleKey.tr()} • ${stop.status.titleKey.tr()}",
+            "${stop.type.titleKey.tr()} • ${stop.status.titleKey.tr()}"
+            "${isPendingSync ? " • ${"pending_sync".tr()}" : ""}",
             style: Styles.font11MediumGrey46(context),
           ),
           SizedBox(height: AppConstants.height20(context)),
           DefaultButton(
-            text: (isArrived ? "complete_stop" : "mark_arrived").tr(),
+            text: _actionKey.tr(),
             gradient: AppColors.brandGradient,
             borderRadius: AppConstants.sp15(context),
-            icon: Icon(
-              isArrived ? Icons.check_circle_outline_rounded : Icons.location_on_outlined,
-              size: MediaQuery.of(context).size.height * .022,
-              color: Colors.white,
-            ),
+            isEnabled: !isBusy,
+            icon: Icon(_actionIcon, size: MediaQuery.of(context).size.height * .022, color: Colors.white),
             onPress: onAction,
           ),
         ],
@@ -77,9 +99,13 @@ class CurrentStopCard extends StatelessWidget {
   }
 }
 
-/// Closing state of the delivery, in place of the current stop card.
+/// Closing state of the delivery, in place of the current stop card. Once
+/// the route was completed on the server the end of day summary shows here.
 class DeliveryFinishedCard extends StatelessWidget {
-  const DeliveryFinishedCard({super.key});
+  const DeliveryFinishedCard({super.key, this.isRouteCompleted = false, this.summary});
+
+  final bool isRouteCompleted;
+  final EndOfDaySummaryModel? summary;
 
   @override
   Widget build(BuildContext context) {
@@ -98,22 +124,59 @@ class DeliveryFinishedCard extends StatelessWidget {
           Container(
             width: iconSize,
             height: iconSize,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.secondaryColor.withValues(alpha: .10),
-            ),
+            decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.secondaryColor.withValues(alpha: .10)),
             child: Icon(Icons.done_all_rounded, size: iconSize * .45, color: AppColors.secondaryColor),
           ),
           SizedBox(height: AppConstants.height15(context)),
-          Text("all_stops_completed".tr(), textAlign: TextAlign.center, style: Styles.font16SemiBoldBlack(context)),
+          Text(
+            (isRouteCompleted ? "route_completed_title" : "all_stops_completed").tr(),
+            textAlign: TextAlign.center,
+            style: Styles.font16SemiBoldBlack(context),
+          ),
           SizedBox(height: AppConstants.height5(context)),
           Text(
-            "all_stops_completed_hint".tr(),
+            (isRouteCompleted ? "route_completed_hint" : "all_stops_completed_hint").tr(),
             textAlign: TextAlign.center,
             style: Styles.font12MediumGrey46(context).copyWith(height: 1.6),
           ),
+          if (summary != null) ...[
+            SizedBox(height: AppConstants.height15(context)),
+            const Divider(height: 1, color: Color(0xffF0F2F5)),
+            SizedBox(height: AppConstants.height15(context)),
+            _buildSummary(context, summary!),
+          ],
         ],
       ),
+    );
+  }
+
+  /// End of day numbers in the same fact rows the vehicle details use.
+  Widget _buildSummary(BuildContext context, EndOfDaySummaryModel summary) {
+    final locale = context.locale.languageCode;
+    final number = NumberFormat.decimalPattern(locale);
+
+    final rows = <MapEntry<String, String>>[
+      MapEntry("completed_stops".tr(), "${number.format(summary.completedStops)}/${number.format(summary.totalStops)}"),
+      MapEntry("skipped_stops".tr(), number.format(summary.skippedStops)),
+      if (summary.canceledStops > 0) MapEntry("canceled_stops".tr(), number.format(summary.canceledStops)),
+      MapEntry("deliveries".tr(), number.format(summary.deliveriesDone)),
+      MapEntry("pickups".tr(), number.format(summary.pickupsDone)),
+      MapEntry("delivered_qty".tr(), number.format(summary.totalDeliveredQty)),
+      MapEntry("returned_qty".tr(), number.format(summary.totalReturnedQty)),
+      MapEntry("damaged_qty".tr(), number.format(summary.totalDamagedQty)),
+      if (summary.distanceKm != null)
+        MapEntry("distance_label".tr(), NumberFormat("#0.0", locale).format(summary.distanceKm)),
+      if (summary.workingMinutes != null)
+        MapEntry("working_time".tr(), DeliveryFormat.duration(context, Duration(minutes: summary.workingMinutes!))),
+    ];
+
+    return Column(
+      children: [
+        for (int i = 0; i < rows.length; i++) ...[
+          if (i != 0) SizedBox(height: AppConstants.height10(context)),
+          InfoRow(label: rows[i].key, value: rows[i].value),
+        ],
+      ],
     );
   }
 }

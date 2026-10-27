@@ -110,9 +110,11 @@ class _DefaultTextFormFieldState extends State<DefaultTextFormField> {
       controller: widget.controller,
       keyboardType: widget.textInputType,
       inputFormatters: [
-        if (widget.textInputType == TextInputType.number||widget.textInputType == TextInputType.phone) ArabicToEnglishNumberFormatter(),
+        if (widget.textInputType == TextInputType.number || widget.textInputType == TextInputType.phone)
+          ArabicToEnglishNumberFormatter(),
         if (widget.textInputType == TextInputType.phone) SaudiPhoneNumberFormatter(),
-        if (widget.textInputType == TextInputType.emailAddress) FilteringTextInputFormatter.allow(RegExp(r'^[@.0-9a-zA-Z\s]*$')),
+        if (widget.textInputType == TextInputType.emailAddress)
+          FilteringTextInputFormatter.allow(RegExp(r'^[@.0-9a-zA-Z\s]*$')),
         ...?widget.formatter,
       ],
       onFieldSubmitted: (value) {
@@ -162,9 +164,9 @@ class _DefaultTextFormFieldState extends State<DefaultTextFormField> {
           borderSide: (!widget.hasBorder)
               ? BorderSide.none
               : BorderSide(
-            color: widget.borderSideEnabledColor ?? const Color(0xffE6E6E6),
-            width: widget.borderSideWidth,
-          ),
+                  color: widget.borderSideEnabledColor ?? const Color(0xffE6E6E6),
+                  width: widget.borderSideWidth,
+                ),
         ),
         filled: true,
         fillColor: widget.fillColor ?? Colors.white,
@@ -180,16 +182,16 @@ class _DefaultTextFormFieldState extends State<DefaultTextFormField> {
           fontSize: MediaQuery.of(context).size.height * .02,
         ),
         suffixIcon:
-        widget.suffixIcon ??
+            widget.suffixIcon ??
             (widget.isPassword
                 ? InkWell(
-              onTap: () {
-                setState(() {
-                  hidePassword = !hidePassword;
-                });
-              },
-              child: Icon(hidePassword ? Icons.visibility_off_sharp : Icons.visibility_sharp),
-            )
+                    onTap: () {
+                      setState(() {
+                        hidePassword = !hidePassword;
+                      });
+                    },
+                    child: Icon(hidePassword ? Icons.visibility_off_sharp : Icons.visibility_sharp),
+                  )
                 : null),
       ),
     );

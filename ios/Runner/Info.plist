@@ -49,6 +49,19 @@
 	<string>The camera is used to take proof photos and to scan barcodes and the trader's handoff QR at pickup and delivery stops.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Photos are attached to incident reports and your profile.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+		<string>sms</string>
+		<string>mailto</string>
+		<string>https</string>
+	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
